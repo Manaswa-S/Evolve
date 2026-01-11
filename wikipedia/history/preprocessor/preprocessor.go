@@ -41,6 +41,7 @@ type Preprocessor struct {
 	analysisFName  string
 	rawRevsDumpDir string
 	cleanDumpDir   string
+	wordsDumpDir   string
 
 	// Raw input channel
 	rawMetaChan chan *RevisionMeta
@@ -102,6 +103,7 @@ func NewWikiPreprocessor(filePath string, metaChan chan *RevisionMeta, rootDumpD
 	p.analysisFName = filepath.Join(p.dumpDir, "0analysis.json")
 	p.rawRevsDumpDir = filepath.Join(p.dumpDir, "revs")
 	p.cleanDumpDir = filepath.Join(p.dumpDir, "clean")
+	p.wordsDumpDir = filepath.Join(p.dumpDir, "words")
 
 	return p, nil
 }
@@ -272,6 +274,10 @@ func (s *Preprocessor) consumeRaw() error {
 
 	// flushes the buffer, fetches the results and caches them
 	flushUserBatch := func() {
+		if len(userBatch) == 0 {
+			return
+		}
+
 		s.usersURLChan <- getURL(userBatch)
 		// The fetchUsersData() should complete before proceeding as
 		// further cache misses can trigger unwanted errors.

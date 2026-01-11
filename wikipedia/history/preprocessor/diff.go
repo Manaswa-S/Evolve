@@ -1,7 +1,11 @@
 package preprocessor
 
 import (
+	"encoding/json"
+	"fmt"
 	"math"
+	"os"
+	"path/filepath"
 	"strings"
 
 	"github.com/sergi/go-diff/diffmatchpatch"
@@ -22,6 +26,38 @@ func (s *Preprocessor) analyzeDiff(rc *RevisionCtx, r *RevisionClean) error {
 
 	oldWords := strings.Fields(localLastRevTxtCache)
 	newWords := strings.Fields(r.Content)
+
+	// >>>
+	// experimental
+
+	wordsFName := fmt.Sprintf("%d-%d.json", rc.Process.Meta.TimeStamp.Unix(), rc.Process.Meta.RevID)
+	wordsPath := filepath.Join(s.wordsDumpDir, wordsFName)
+
+	err := os.MkdirAll(s.wordsDumpDir, 0700)
+	if err != nil {
+		return err
+	}
+	wordsRaw := &RevisionWords{
+		RevID:         rc.Process.Meta.RevID,
+		ParentID:      rc.Process.Meta.ParentID,
+		TimeStamp:     rc.Process.Meta.TimeStamp,
+		ContentFormat: "words",
+		Content:       newWords,
+	}
+	wordsMarshalled, err := json.MarshalIndent(wordsRaw, "", "  ")
+	if err != nil {
+		return err
+	}
+	wordsF, err := os.Create(wordsPath)
+	if err != nil {
+		return err
+	}
+	_, err = wordsF.Write(wordsMarshalled)
+	if err != nil {
+		return err
+	}
+
+	// >>>
 
 	oldJoined := strings.Join(oldWords, "\n")
 	newJoined := strings.Join(newWords, "\n")

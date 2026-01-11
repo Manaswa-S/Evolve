@@ -24,7 +24,7 @@ func main() {
 		panic(err)
 	}
 
-	title := "AI"
+	title := "Machine learning"
 
 	debugger, err := debugger.NewDebugger()
 	if err != nil {

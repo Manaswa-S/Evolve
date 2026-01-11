@@ -20,7 +20,7 @@ import (
 
 type Metrics struct {
 	PagesFetched int `json:"Pages Fetched"`
-	RevsFetched  int `json:"RevsFetched"`
+	RevsFetched  int `json:"Revs Fetched"`
 }
 
 type Scraper struct {
