@@ -38,6 +38,10 @@ func NewDebugger() (*Debugger, error) {
 	}, nil
 }
 
+func (s *Debugger) Print(str string, a ...any) {
+	fmt.Printf(str, a...)
+}
+
 func (s *Debugger) Debug(str string) {
 	fmt.Fprintf(s.f, "\nDEBUG : %s", str)
 }

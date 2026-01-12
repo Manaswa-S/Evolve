@@ -1,20 +1,40 @@
 package preprocessor
 
 import (
-	"encoding/json"
-	"fmt"
+	"context"
+	"evolve/debugger"
 	"math"
-	"os"
-	"path/filepath"
 	"strings"
 
 	"github.com/sergi/go-diff/diffmatchpatch"
 )
 
+type Differ struct {
+	// In  chan *RevisionAnalysis
+	// Out chan error
+
+	ctx      context.Context
+	dumpDir  string
+	metrics  *Metrics
+	debugger *debugger.Debugger
+}
+
+func NewDiffer(commons *Commons) *Differ {
+	// func NewDiffer(commons *Commons, in chan *RevisionAnalysis, out chan error) *Differ {
+	return &Differ{
+		// In:       in,
+		// Out:      out,
+		ctx:      commons.ctx,
+		dumpDir:  commons.dumpDir,
+		metrics:  commons.metrics,
+		debugger: commons.debugger,
+	}
+}
+
 // Empty if first Revision, will still compare
 var localLastRevTxtCache = ""
 
-func (s *Preprocessor) analyzeDiff(rc *RevisionCtx, r *RevisionClean) error {
+func (s *Differ) analyzeDiff(rc *RevisionAnalysis, r *RevisionClean) error {
 	dmp := diffmatchpatch.New()
 
 	diffs := dmp.DiffMain(localLastRevTxtCache, r.Content, false)
@@ -30,32 +50,24 @@ func (s *Preprocessor) analyzeDiff(rc *RevisionCtx, r *RevisionClean) error {
 	// >>>
 	// experimental
 
-	wordsFName := fmt.Sprintf("%d-%d.json", rc.Process.Meta.TimeStamp.Unix(), rc.Process.Meta.RevID)
-	wordsPath := filepath.Join(s.wordsDumpDir, wordsFName)
+	// wordsFName := fmt.Sprintf("%d-%d.json", rc.Process.Meta.TimeStamp.Unix(), rc.Process.Meta.RevID)
+	// wordsPath := filepath.Join(s.wordsDumpDir, wordsFName)
 
-	err := os.MkdirAll(s.wordsDumpDir, 0700)
-	if err != nil {
-		return err
-	}
-	wordsRaw := &RevisionWords{
-		RevID:         rc.Process.Meta.RevID,
-		ParentID:      rc.Process.Meta.ParentID,
-		TimeStamp:     rc.Process.Meta.TimeStamp,
-		ContentFormat: "words",
-		Content:       newWords,
-	}
-	wordsMarshalled, err := json.MarshalIndent(wordsRaw, "", "  ")
-	if err != nil {
-		return err
-	}
-	wordsF, err := os.Create(wordsPath)
-	if err != nil {
-		return err
-	}
-	_, err = wordsF.Write(wordsMarshalled)
-	if err != nil {
-		return err
-	}
+	// wordsRaw := &RevisionWords{
+	// 	RevID:         rc.Process.Meta.RevID,
+	// 	ParentID:      rc.Process.Meta.ParentID,
+	// 	TimeStamp:     rc.Process.Meta.TimeStamp,
+	// 	ContentFormat: "words",
+	// 	Content:       newWords,
+	// }
+	// wordsMarshalled, err := json.MarshalIndent(wordsRaw, "", "  ")
+	// if err != nil {
+	// 	return err
+	// }
+	// err = os.WriteFile(wordsPath, wordsMarshalled, 0700)
+	// if err != nil {
+	// 	return err
+	// }
 
 	// >>>
 

@@ -1,6 +1,10 @@
 package preprocessor
 
-import "fmt"
+import (
+	"context"
+	"evolve/debugger"
+	"fmt"
+)
 
 /*
 "*" : anon
@@ -64,103 +68,104 @@ func reinforce(current, weight int) int {
 	return current + int((100-current)*weight/100)
 }
 
-var GroupsMap = map[GroupTag]func(*RevisionCtx){
-	TagBot: func(rc *RevisionCtx) {
+var GroupsMap = map[GroupTag]func(*RevisionAnalysis){
+	TagBot: func(rc *RevisionAnalysis) {
+		c := 100
+		rc.Confidence.Automation = reinforce(rc.Confidence.Automation, c)
+		rc.Tags.IsBot = true
+	},
+	TagGlobalBot: func(rc *RevisionAnalysis) {
 		c := 80
 		rc.Confidence.Automation = reinforce(rc.Confidence.Automation, c)
 	},
-	TagGlobalBot: func(rc *RevisionCtx) {
-		c := 80
-		rc.Confidence.Automation = reinforce(rc.Confidence.Automation, c)
-	},
-	TagFlood: func(rc *RevisionCtx) {
+	TagFlood: func(rc *RevisionAnalysis) {
 		c := 60
 		rc.Confidence.Automation = reinforce(rc.Confidence.Automation, c)
 	},
-	TagTemplateEditor: func(rc *RevisionCtx) {
+	TagTemplateEditor: func(rc *RevisionAnalysis) {
 		c := 60
 		rc.Confidence.Automation = reinforce(rc.Confidence.Automation, c)
 	},
 	//
-	TagUser: func(rc *RevisionCtx) {
+	TagUser: func(rc *RevisionAnalysis) {
 		c := 85
 		rc.Confidence.Human = reinforce(rc.Confidence.Human, c)
 	},
-	TagExtendedConfirmed: func(rc *RevisionCtx) {
+	TagExtendedConfirmed: func(rc *RevisionAnalysis) {
 		c := 90
 		rc.Confidence.Human = reinforce(rc.Confidence.Human, c)
 	},
-	TagAutoConfirmed: func(rc *RevisionCtx) {
+	TagAutoConfirmed: func(rc *RevisionAnalysis) {
 		c := 85
 		rc.Confidence.Human = reinforce(rc.Confidence.Human, c)
 	},
-	TagConfirmed: func(rc *RevisionCtx) {
+	TagConfirmed: func(rc *RevisionAnalysis) {
 		c := 85
 		rc.Confidence.Human = reinforce(rc.Confidence.Human, c)
 	},
-	TagReviewer: func(rc *RevisionCtx) {
+	TagReviewer: func(rc *RevisionAnalysis) {
 		c := 80
 		rc.Confidence.Human = reinforce(rc.Confidence.Human, c)
 	},
-	TagAutoReviewer: func(rc *RevisionCtx) {
+	TagAutoReviewer: func(rc *RevisionAnalysis) {
 		c := 80
 		rc.Confidence.Human = reinforce(rc.Confidence.Human, c)
 	},
-	TagEditor: func(rc *RevisionCtx) {
+	TagEditor: func(rc *RevisionAnalysis) {
 		c := 70
 		rc.Confidence.Human = reinforce(rc.Confidence.Human, c)
 	},
-	TagResearcher: func(rc *RevisionCtx) {
+	TagResearcher: func(rc *RevisionAnalysis) {
 		c := 60
 		rc.Confidence.Human = reinforce(rc.Confidence.Human, c)
 	},
-	TagAbuseFilter: func(rc *RevisionCtx) {
+	TagAbuseFilter: func(rc *RevisionAnalysis) {
 		c := 60
 		rc.Confidence.Human = reinforce(rc.Confidence.Human, c)
 	},
-	TagTemp: func(rc *RevisionCtx) {
+	TagTemp: func(rc *RevisionAnalysis) {
 		c := 60
 		rc.Confidence.Human = reinforce(rc.Confidence.Human, c)
 	},
-	TagTempAccViewer: func(rc *RevisionCtx) {
+	TagTempAccViewer: func(rc *RevisionAnalysis) {
 		c := 75
 		rc.Confidence.Human = reinforce(rc.Confidence.Human, c)
 	},
-	TagIPBlockExempty: func(rc *RevisionCtx) {
+	TagIPBlockExempty: func(rc *RevisionAnalysis) {
 		c := 65
 		rc.Confidence.Human = reinforce(rc.Confidence.Human, c)
 	},
 	//
-	TagSysOp: func(rc *RevisionCtx) {
+	TagSysOp: func(rc *RevisionAnalysis) {
 		c := 80
 		rc.Confidence.Structural = reinforce(rc.Confidence.Structural, c)
 	},
-	TagGlobalSysOp: func(rc *RevisionCtx) {
+	TagGlobalSysOp: func(rc *RevisionAnalysis) {
 		c := 90
 		rc.Confidence.Structural = reinforce(rc.Confidence.Structural, c)
 	},
 	//
-	TagBureaucrat: func(rc *RevisionCtx) {
+	TagBureaucrat: func(rc *RevisionAnalysis) {
 		c := 80
 		rc.Confidence.Maintenance = reinforce(rc.Confidence.Maintenance, c)
 	},
-	TagCheckUser: func(rc *RevisionCtx) {
+	TagCheckUser: func(rc *RevisionAnalysis) {
 		c := 80
 		rc.Confidence.Maintenance = reinforce(rc.Confidence.Maintenance, c)
 	},
-	TagRollBacker: func(rc *RevisionCtx) {
+	TagRollBacker: func(rc *RevisionAnalysis) {
 		c := 80
 		rc.Confidence.Maintenance = reinforce(rc.Confidence.Maintenance, c)
 	},
-	TagPatroller: func(rc *RevisionCtx) {
+	TagPatroller: func(rc *RevisionAnalysis) {
 		c := 70
 		rc.Confidence.Maintenance = reinforce(rc.Confidence.Maintenance, c)
 	},
-	TagExtendedMover: func(rc *RevisionCtx) {
+	TagExtendedMover: func(rc *RevisionAnalysis) {
 		c := 65
 		rc.Confidence.Maintenance = reinforce(rc.Confidence.Maintenance, c)
 	},
-	TagFileMover: func(rc *RevisionCtx) {
+	TagFileMover: func(rc *RevisionAnalysis) {
 		c := 50
 		rc.Confidence.Maintenance = reinforce(rc.Confidence.Maintenance, c)
 	},
@@ -170,10 +175,29 @@ var IgnoreGroupMap = map[GroupTag]bool{
 	TagAsterisk: true,
 }
 
-func (s *Preprocessor) analyzeUser(r *RevisionCtx) error {
-	for _, flag := range r.Process.User.Groups {
+type UserAnalyzer struct {
+	// In       chan *RevisionMeta
+	// Out      chan error
+	ctx      context.Context
+	metrics  *Metrics
+	debugger *debugger.Debugger
+}
+
+func NewUserAnalyzer(commons *Commons) *UserAnalyzer {
+	// func NewUserAnalyzer(commons *Commons, in chan *RevisionMeta, out chan error) *UserAnalyzer {
+	return &UserAnalyzer{
+		// In:       in,
+		// Out:      out,
+		ctx:      commons.ctx,
+		metrics:  commons.metrics,
+		debugger: commons.debugger,
+	}
+}
+
+func (s *UserAnalyzer) analyzeUser(ra *RevisionAnalysis) error {
+	for _, flag := range ra.Process.User.Groups {
 		if set, ok := GroupsMap[GroupTag(flag)]; ok {
-			set(r)
+			set(ra)
 		} else {
 			if exempt, ok := IgnoreGroupMap[GroupTag(flag)]; ok {
 				if !exempt {

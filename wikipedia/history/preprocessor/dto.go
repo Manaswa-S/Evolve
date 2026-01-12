@@ -60,6 +60,7 @@ type ProcessCtx struct {
 }
 
 type RevisionTags struct {
+	IsBot              bool `json:"isBot"`
 	IsMicroEdit        bool `json:"isMicroEdit"`
 	IsStructural       bool `json:"isStructural"`
 	IsContentExpansion bool `json:"isContentExpansion"`
@@ -99,7 +100,7 @@ type RevisionDiffs struct {
 	TypeOfEdit   string `json:"typeOfEdit"`
 }
 
-type RevisionCtx struct {
+type RevisionAnalysis struct {
 	Process    *ProcessCtx         `json:"process"`
 	Tags       *RevisionTags       `json:"tags"`
 	Confidence *RevisionConfidence `json:"confidence"`
