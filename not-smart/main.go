@@ -2,6 +2,7 @@ package main
 
 import (
 	"evolve/debugger"
+	"evolve/wikipedia/history/compressor"
 	"evolve/wikipedia/history/preprocessor"
 	"evolve/wikipedia/history/scraper"
 	"flag"
@@ -61,6 +62,15 @@ func main() {
 			panic(err)
 		}
 		preprocessor.PrintMetrics()
+
+	case "compress":
+		dumpDir := filepath.Join(wd, "dump", "wikipedia", title)
+		compressor := compressor.NewCompressor(dumpDir)
+		if err := compressor.Run(); err != nil {
+			panic(err)
+		}
+		<-flowChan
+		fmt.Println("Stopping the compressor")
 	}
 }
 

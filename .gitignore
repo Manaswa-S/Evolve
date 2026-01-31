@@ -2,3 +2,4 @@
 dump/
 logs/
 *.bin
+.venv/
